@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - integrates with Clerk authentication
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique // Clerk user ID
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  resumes              Resume[]
+  templates            ResumeTemplate[]
+  aiGenerationHistory  AIGenerationHistory[]
+
+  @@map("users")
+}
+
+// Resume model - main resume entity
+model Resume {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  isPublic    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  templateId  String?
+  template    ResumeTemplate? @relation(fields: [templateId], references: [id])
+  
+  sections    ResumeSection[]
+  aiHistory   AIGenerationHistory[]
+
+  @@map("resumes")
+}
+
+// Resume sections - modular content blocks
+model ResumeSection {
+  id       String @id @default(cuid())
+  type     SectionType
+  title    String
+  content  Json   // Flexible JSON structure for different section types
+  order    Int    // For ordering sections
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  resumeId String
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@map("resume_sections")
+}
+
+// Resume templates
+model ResumeTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  thumbnail   String?  // URL to template preview
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  resumes     Resume[]
+
+  @@map("resume_templates")
+}
+
+// AI Generation History - track AI interactions
+model AIGenerationHistory {
+  id          String   @id @default(cuid())
+  prompt      String   // The prompt sent to AI
+  response    String   // AI response
+  model       String   // AI model used (e.g., "gemini-pro")
+  tokensUsed  Int?     // Token usage
+  cost        Float?   // Cost of generation
+  status      AIStatus @default(SUCCESS)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  resumeId    String?
+  resume      Resume?  @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+
+  @@map("ai_generation_history")
+}
+
+// Enums
+enum SectionType {
+  PERSONAL_INFO
+  SUMMARY
+  EXPERIENCE
+  EDUCATION
+  SKILLS
+  PROJECTS
+  CERTIFICATIONS
+  LANGUAGES
+  VOLUNTEER
+  CUSTOM
+}
+
+enum AIStatus {
+  SUCCESS
+  FAILED
+  PENDING
+  CANCELLED
+}
