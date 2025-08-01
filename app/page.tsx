@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import { Sparkles, ArrowRight, CheckCircle, Star, Zap, Shield, Clock, Users } from 'lucide-react';
+import Link from 'next/link';
 
 const LandingPage = () => {
   const [isVisible, setIsVisible] = useState({});
@@ -62,7 +63,9 @@ const LandingPage = () => {
                   <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
                   <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700"></div>
                   <span className="relative z-10 flex items-center justify-center space-x-2">
-                    <span>Create My Resume</span>
+                   <Link href = "/resume">
+                   <span>Create My Resume</span>
+                   </Link>
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
                   </span>
                 </button>

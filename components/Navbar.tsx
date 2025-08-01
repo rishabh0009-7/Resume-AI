@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Menu, X, Sparkles, FileText, User, LogOut } from "lucide-react";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
+import Link from "next/link";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,12 +35,12 @@ const Navbar = () => {
               </div>
               <div className="absolute inset-0 bg-black rounded-lg opacity-20 blur-md group-hover:opacity-40 transition-opacity duration-200"></div>
             </div>
-            <span className="text-xl font-bold text-gray-900 tracking-tight">
+            <Link href = "/"><span className="text-xl font-bold text-gray-900 tracking-tight">
               ResumeAI
-            </span>
+            </span></Link>
           </div>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation
           <div className="hidden md:flex items-center space-x-8">
             <a
               href="#features"
@@ -65,7 +66,7 @@ const Navbar = () => {
             >
               About
             </a>
-          </div>
+          </div> */}
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
