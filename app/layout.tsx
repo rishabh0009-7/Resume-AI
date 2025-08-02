@@ -10,6 +10,7 @@ import {
   UserButton,
 } from '@clerk/nextjs'
 import Navbar from "@/components/Navbar";
+// import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +40,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
           <Navbar/>
-        {children}
+          <main className="relative">
+              {children}
+            </main>
+            {/* <Toaster /> */}
       </body>
     </html>
         </ClerkProvider>

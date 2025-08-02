@@ -1,5 +1,5 @@
-export default function createResume(){
-    return (
-        <h1>create resume page</h1>
-    )
+import ResumeBuilder from "@/components/ResumeBuilder";
+
+export default function CreateResumePage() {
+  return <ResumeBuilder />;
 }
