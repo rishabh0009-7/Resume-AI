@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { aiService } from "@/lib/ai-service";
+import { AiService } from "@/lib/ai-services";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     switch (type) {
       case "enhance_section":
-        generatedContent = await aiService.enhanceResumeSection(
+        generatedContent = await AiService.enhanceResumeSection(
           context || "section",
           content,
           jobDescription
