@@ -76,8 +76,10 @@ model ResumeTemplate {
   name        String
   description String?
   thumbnail   String?  // URL to template preview
+  structure   Json     // Template structure/layout
+  styling     Json     // CSS/styling configuration
   isActive    Boolean  @default(true)
-  isDefault   Boolean  @default(false)
+  isPremium   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -122,6 +124,8 @@ enum SectionType {
   CERTIFICATIONS
   LANGUAGES
   VOLUNTEER
+  AWARDS
+  REFERENCES
   CUSTOM
 }
 
