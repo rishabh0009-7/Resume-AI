@@ -46,10 +46,7 @@ export async function POST(
     } else if (format === "txt") {
       content = generateTXTContent(resume);
     } else {
-      return NextResponse.json(
-        { error: "Unsupported format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Unsupported format" }, { status: 400 });
     }
 
     // For now, return the content as text
@@ -75,7 +72,7 @@ function generatePDFContent(resume: any): string {
   resume.sections.forEach((section: any) => {
     content += `${section.title.toUpperCase()}\n`;
     content += "-".repeat(section.title.length) + "\n";
-
+    
     if (section.type === "PERSONAL_INFO") {
       const info = section.content;
       content += `${info.firstName} ${info.lastName}\n`;
@@ -103,7 +100,7 @@ function generatePDFContent(resume: any): string {
         content += `${category.name}: ${category.skills.join(", ")}\n`;
       });
     }
-
+    
     content += "\n";
   });
 
@@ -111,11 +108,11 @@ function generatePDFContent(resume: any): string {
 }
 
 function generateDOCXContent(resume: any): string {
-  // Similar to PDF but with Word-specific formatting
+  
   return generatePDFContent(resume);
 }
 
 function generateTXTContent(resume: any): string {
-  // Plain text version
+
   return generatePDFContent(resume);
 }
