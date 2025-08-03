@@ -15,13 +15,20 @@ export async function POST(
 
     const { format = "pdf" } = await request.json();
 
+    // Get user first
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Get resume with sections
     const resume = await prisma.resume.findFirst({
       where: {
         id: params.id,
-        userId: {
-          clerkId: userId,
-        },
+        userId: user.id, // Use user.id instead of nested query
       },
       include: {
         sections: {
@@ -49,8 +56,6 @@ export async function POST(
       return NextResponse.json({ error: "Unsupported format" }, { status: 400 });
     }
 
-    // For now, return the content as text
-    // In a real implementation, you'd use libraries like puppeteer for PDF generation
     return NextResponse.json({
       content,
       filename,
@@ -75,30 +80,46 @@ function generatePDFContent(resume: any): string {
     
     if (section.type === "PERSONAL_INFO") {
       const info = section.content;
-      content += `${info.firstName} ${info.lastName}\n`;
-      content += `${info.email} | ${info.phone}\n`;
-      content += `${info.location}\n`;
+      if (info.firstName && info.lastName) {
+        content += `${info.firstName} ${info.lastName}\n`;
+      }
+      if (info.email && info.phone) {
+        content += `${info.email} | ${info.phone}\n`;
+      }
+      if (info.location) {
+        content += `${info.location}\n`;
+      }
       if (info.linkedin) content += `LinkedIn: ${info.linkedin}\n`;
       if (info.website) content += `Website: ${info.website}\n`;
     } else if (section.type === "SUMMARY") {
-      content += `${section.content.text}\n`;
+      if (section.content.text) {
+        content += `${section.content.text}\n`;
+      }
     } else if (section.type === "EXPERIENCE") {
-      section.content.items.forEach((item: any) => {
-        content += `${item.title} at ${item.company}\n`;
-        content += `${item.startDate} - ${item.endDate || "Present"}\n`;
-        content += `${item.description}\n\n`;
-      });
+      if (section.content.items && Array.isArray(section.content.items)) {
+        section.content.items.forEach((item: any) => {
+          content += `${item.title || 'Position'} at ${item.company || 'Company'}\n`;
+          content += `${item.startDate || 'Start'} - ${item.endDate || "Present"}\n`;
+          content += `${item.description || ''}\n\n`;
+        });
+      }
     } else if (section.type === "EDUCATION") {
-      section.content.items.forEach((item: any) => {
-        content += `${item.degree} in ${item.field}\n`;
-        content += `${item.institution}, ${item.graduationYear}\n`;
-        if (item.gpa) content += `GPA: ${item.gpa}\n`;
-        content += "\n";
-      });
+      if (section.content.items && Array.isArray(section.content.items)) {
+        section.content.items.forEach((item: any) => {
+          content += `${item.degree || 'Degree'} in ${item.field || 'Field'}\n`;
+          content += `${item.institution || 'Institution'}, ${item.graduationYear || 'Year'}\n`;
+          if (item.gpa) content += `GPA: ${item.gpa}\n`;
+          content += "\n";
+        });
+      }
     } else if (section.type === "SKILLS") {
-      section.content.categories.forEach((category: any) => {
-        content += `${category.name}: ${category.skills.join(", ")}\n`;
-      });
+      if (section.content.categories && Array.isArray(section.content.categories)) {
+        section.content.categories.forEach((category: any) => {
+          if (category.skills && Array.isArray(category.skills)) {
+            content += `${category.name || 'Skills'}: ${category.skills.join(", ")}\n`;
+          }
+        });
+      }
     }
     
     content += "\n";
@@ -108,11 +129,12 @@ function generatePDFContent(resume: any): string {
 }
 
 function generateDOCXContent(resume: any): string {
-  
+  // For now, return the same content as PDF
+  // In a real implementation, you'd use docx library to generate proper DOCX
   return generatePDFContent(resume);
 }
 
 function generateTXTContent(resume: any): string {
-
+  // Return the same content as PDF for text format
   return generatePDFContent(resume);
 }

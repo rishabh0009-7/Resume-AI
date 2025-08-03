@@ -123,9 +123,12 @@ async function main() {
 
   for (const template of templates) {
     await prisma.resumeTemplate.upsert({
-      where: { name: template.name },
+      where: { id: template.name.toLowerCase().replace(/\s+/g, "-") },
       update: template,
-      create: template,
+      create: {
+        ...template,
+        id: template.name.toLowerCase().replace(/\s+/g, "-"),
+      },
     });
   }
 

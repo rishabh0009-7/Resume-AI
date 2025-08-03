@@ -1,204 +1,186 @@
 "use client";
-import React, { useState } from "react";
+
+import { useUser } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
 import {
-  Plus,
-  FileText,
-  Calendar,
-  Download,
-  Edit3,
-  Trash2,
-  Eye,
-} from "lucide-react";
-import { redirect } from "next/navigation";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Plus, FileText, Download, Edit, Trash2, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { useState, useEffect } from "react";
 
-const ResumePage = () => {
-  // Sample resume data - you can replace this with actual data
-  const [resumes, setResumes] = useState([
-    {
-      id: 1,
-      title: "Software Engineer Resume",
-      lastModified: "2025-01-25",
-      template: "Modern",
-      status: "Complete",
-    },
-    {
-      id: 2,
-      title: "Product Manager Resume",
-      lastModified: "2025-01-20",
-      template: "Professional",
-      status: "Draft",
-    },
-    {
-      id: 3,
-      title: "Frontend Developer Resume",
-      lastModified: "2025-01-15",
-      template: "Creative",
-      status: "Complete",
-    },
-  ]);
+interface Resume {
+  id: string;
+  title: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-  const handleCreateResume = () => {
-    // Navigate to create resume page
-    window.location.href = "/resume/create-resume";
+export default function Dashboard() {
+  const { user } = useUser();
+  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchResumes();
+  }, []);
+
+  const fetchResumes = async () => {
+    try {
+      const response = await fetch("/api/resumes");
+      if (response.ok) {
+        const data = await response.json();
+        setResumes(data.resumes);
+      }
+    } catch (error) {
+      console.error("Error fetching resumes:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleEditResume = (id: number) => {
-    console.log("Edit resume:", id);
+  const deleteResume = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this resume?")) return;
+
+    try {
+      const response = await fetch(`/api/resumes/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setResumes(resumes.filter((resume) => resume.id !== id));
+      }
+    } catch (error) {
+      console.error("Error deleting resume:", error);
+    }
   };
 
-  const handleDownloadResume = (id: number) => {
-    console.log("Download resume:", id);
-  };
-
-  const handleDeleteResume = (id: number) => {
-    setResumes(resumes.filter((resume) => resume.id !== id));
-  };
-
-  const handleViewResume = (id: number) => {
-    console.log("View resume:", id);
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your resumes...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-12">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-3">
-                My Resumes
-              </h1>
-              <p className="text-xl text-gray-600">
-                Create and manage your professional resumes
-              </p>
-            </div>
-            <button
-              onClick={handleCreateResume}
-              className="group relative px-8 py-4 bg-black text-white rounded-xl font-semibold text-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 self-start"
-            >
-              <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700"></div>
-              <span className="relative z-10 flex items-center space-x-2">
-                <Plus className="w-5 h-5" />
-                <span>Create New Resume</span>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="h-8 w-8 text-blue-600" />
+              <span className="text-xl font-bold text-gray-900">
+                AI Resume Builder
               </span>
-            </button>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600">
+                Welcome,{" "}
+                {user?.firstName || user?.emailAddresses[0]?.emailAddress}
+              </span>
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+          <p className="text-gray-600">
+            Manage your resumes and create new ones with AI assistance.
+          </p>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <Link href="/resume/create">
+            <Button className="flex items-center space-x-2">
+              <Plus className="h-5 w-5" />
+              <span>Create New Resume</span>
+            </Button>
+          </Link>
         </div>
 
         {/* Resumes Grid */}
-        {resumes.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {resumes.map((resume) => (
-              <div key={resume.id} className="group relative">
-                <div className="absolute inset-0 bg-black rounded-3xl opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
-                <div className="relative bg-white rounded-3xl p-8 border border-gray-100 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-black via-gray-600 to-black transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-
-                  <div className="relative z-10">
-                    {/* Resume Preview */}
-                    <div className="w-full h-48 bg-gray-100 rounded-2xl mb-6 flex items-center justify-center group-hover:bg-gray-50 transition-colors duration-300">
-                      <FileText className="w-16 h-16 text-gray-400 group-hover:text-gray-500 transition-colors duration-300" />
-                    </div>
-
-                    {/* Resume Info */}
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900 group-hover:text-black transition-colors duration-300">
-                          {resume.title}
-                        </h3>
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center space-x-1 text-sm text-gray-600">
-                            <Calendar className="w-4 h-4" />
-                            <span>
-                              {new Date(
-                                resume.lastModified
-                              ).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              resume.status === "Complete"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-yellow-100 text-yellow-700"
-                            }`}
-                          >
-                            {resume.status}
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Template: {resume.template}
-                        </p>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleEditResume(resume.id)}
-                            className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-all duration-200"
-                            title="Edit Resume"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDownloadResume(resume.id)}
-                            className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-all duration-200"
-                            title="Download Resume"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteResume(resume.id)}
-                            className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                            title="Delete Resume"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <button
-                          onClick={() => handleViewResume(resume.id)}
-                          className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors duration-200"
-                        >
-                          <Eye className="w-4 h-4 inline mr-1" />
-                          View
-                        </button>
-                      </div>
-                    </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {resumes.map((resume) => (
+            <Card key={resume.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <FileText className="h-8 w-8 text-blue-600" />
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteResume(resume.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          // Empty State
-          <div className="text-center py-20">
-            <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-8">
-              <FileText className="w-16 h-16 text-gray-400" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              No Resumes Yet
-            </h3>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Start building your professional resume with our AI-powered tools
-              and beautiful templates.
-            </p>
-            <button
-              onClick={handleCreateResume}
-              className="group relative px-8 py-4 bg-black text-white rounded-xl font-semibold text-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
-            >
-              <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-              <span className="relative z-10 flex items-center space-x-2">
-                <Plus className="w-5 h-5" />
-                <span>Create Your First Resume</span>
-              </span>
-            </button>
-          </div>
+                <CardTitle className="text-lg">{resume.title}</CardTitle>
+                <CardDescription>
+                  {resume.description || "No description"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-500">
+                    Last updated:{" "}
+                    {new Date(resume.updatedAt).toLocaleDateString()}
+                  </div>
+                  <div className="flex space-x-2">
+                    <Link href={`/resume/${resume.id}`}>
+                      <Button variant="outline" size="sm" className="flex-1">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                    </Link>
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Empty State */}
+        {resumes.length === 0 && (
+          <Card className="text-center py-12">
+            <CardContent>
+              <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                No resumes yet
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Create your first resume with AI assistance to get started.
+              </p>
+              <Link href="/resume/create">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Resume
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
   );
-};
-
-export default ResumePage;
+}
+j

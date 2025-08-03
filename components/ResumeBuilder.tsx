@@ -19,13 +19,19 @@ interface ResumeData {
   }[];
 }
 
-const ResumeBuilder = () => {
+interface ResumeBuilderProps {
+  initialData?: ResumeData;
+}
+
+const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ initialData }) => {
   const router = useRouter();
-  const [resumeData, setResumeData] = useState<ResumeData>({
-    title: "",
-    description: "",
-    sections: [],
-  });
+  const [resumeData, setResumeData] = useState<ResumeData>(
+    initialData || {
+      title: "",
+      description: "",
+      sections: [],
+    }
+  );
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -108,8 +114,13 @@ const ResumeBuilder = () => {
   const saveResume = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/resumes", {
-        method: "POST",
+      const method = resumeData.id ? "PUT" : "POST";
+      const url = resumeData.id
+        ? `/api/resumes/${resumeData.id}`
+        : "/api/resumes";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: resumeData.title,
@@ -120,7 +131,12 @@ const ResumeBuilder = () => {
 
       if (response.ok) {
         const { resume } = await response.json();
-        router.push(`/resume/${resume.id}`);
+        if (!resumeData.id) {
+          router.push(`/resume/${resume.id}`);
+        } else {
+          // Show success message for updates
+          console.log("Resume updated successfully");
+        }
       }
     } catch (error) {
       console.error("Error saving resume:", error);

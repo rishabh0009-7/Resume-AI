@@ -16,13 +16,10 @@ export async function GET(request: NextRequest) {
         isActive: true,
         OR: [
           { userId: null }, // Default templates
-          { userId: { not: null } } // User-created templates
-        ]
+          { userId: { not: null } }, // User-created templates
+        ],
       },
-      orderBy: [
-        { isPremium: "desc" },
-        { createdAt: "desc" }
-      ]
+      orderBy: [{ isPremium: "desc" }, { createdAt: "desc" }],
     });
 
     return NextResponse.json({ templates });

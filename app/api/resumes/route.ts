@@ -10,26 +10,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Get user
     const user = await prisma.user.findUnique({
       where: { clerkId: userId },
-      include: {
-        resumes: {
-          include: {
-            template: true,
-            sections: {
-              orderBy: { order: "asc" },
-            },
-          },
-          orderBy: { updatedAt: "desc" },
-        },
-      },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ resumes: user.resumes });
+    // Get all resumes for the user
+    const resumes = await prisma.resume.findMany({
+      where: { userId: user.id },
+      include: {
+        sections: {
+          orderBy: { order: "asc" },
+        },
+        template: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    return NextResponse.json({ resumes });
   } catch (error) {
     console.error("Error fetching resumes:", error);
     return NextResponse.json(
@@ -50,23 +52,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { title, description, templateId } = body;
 
-    // Get or create user
-    let user = await prisma.user.findUnique({
+    // Get user
+    const user = await prisma.user.findUnique({
       where: { clerkId: userId },
     });
 
     if (!user) {
-      // Create user if doesn't exist
-      const clerkUser = await auth();
-      user = await prisma.user.create({
-        data: {
-          clerkId: userId,
-          email: clerkUser.user?.emailAddresses[0]?.emailAddress || "",
-          firstName: clerkUser.user?.firstName || "",
-          lastName: clerkUser.user?.lastName || "",
-          avatar: clerkUser.user?.imageUrl || "",
-        },
-      });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Create resume
@@ -74,12 +66,14 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         description,
+        templateId,
         userId: user.id,
-        templateId: templateId || null,
       },
       include: {
+        sections: {
+          orderBy: { order: "asc" },
+        },
         template: true,
-        sections: true,
       },
     });
 
