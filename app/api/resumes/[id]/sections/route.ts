@@ -13,14 +13,21 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Get user first
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Get resume sections
     const sections = await prisma.resumeSection.findMany({
       where: {
         resumeId: params.id,
         resume: {
-          userId: {
-            clerkId: userId,
-          },
+          userId: user.id, // Use user.id instead of nested clerkId query
         },
       },
       orderBy: { order: "asc" },
@@ -50,13 +57,20 @@ export async function POST(
     const body = await request.json();
     const { type, title, content, order } = body;
 
+    // Get user first
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Verify resume belongs to user
     const resume = await prisma.resume.findFirst({
       where: {
         id: params.id,
-        userId: {
-          clerkId: userId,
-        },
+        userId: user.id, // Use user.id instead of nested clerkId query
       },
     });
 
@@ -99,13 +113,20 @@ export async function PUT(
     const body = await request.json();
     const { sections } = body;
 
+    // Get user first
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Verify resume belongs to user
     const resume = await prisma.resume.findFirst({
       where: {
         id: params.id,
-        userId: {
-          clerkId: userId,
-        },
+        userId: user.id, // Use user.id instead of nested clerkId query
       },
     });
 
