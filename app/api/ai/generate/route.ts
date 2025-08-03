@@ -13,6 +13,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user first
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     requestBody = await request.json()
     const { 
       type, 
@@ -56,7 +65,7 @@ export async function POST(request: NextRequest) {
         break
 
       case 'optimize_ats':
-        generatedContent = await aiService.optimizeForATS(
+        generatedContent = await aiService.optimizeForAts( // Fixed: lowercase 'a' in 'Ats'
           content,
           jobDescription
         )
@@ -88,22 +97,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Log AI generation history
-    if (userId) {
-      try {
-        await prisma.aIGenerationHistory.create({
-          data: {
-            prompt: content,
-            response: generatedContent,
-            model: 'gemini-pro',
-            status: 'SUCCESS',
-            userId: userId,
-            resumeId: resumeId || null,
-          },
-        })
-      } catch (error) {
-        console.error('Error logging AI history:', error)
-        // Don't fail the request if logging fails
-      }
+    try {
+      await prisma.aIGenerationHistory.create({
+        data: {
+          prompt: content,
+          response: generatedContent,
+          model: 'gemini-pro',
+          status: 'SUCCESS',
+          userId: user.id, // Use user.id instead of userId (clerkId)
+          resumeId: resumeId || null,
+        },
+      })
+    } catch (error) {
+      console.error('Error logging AI history:', error)
+      // Don't fail the request if logging fails
     }
 
     return NextResponse.json({
@@ -117,18 +124,24 @@ export async function POST(request: NextRequest) {
     
     // Log failed generation
     try {
-      const { userId } = await auth()
-      if (userId) {
-        await prisma.aIGenerationHistory.create({
-          data: {
-            prompt: requestBody?.content || '',
-            response: '',
-            model: 'gemini-pro',
-            status: 'FAILED',
-            userId: userId,
-            resumeId: requestBody?.resumeId || null,
-          },
+      const { userId: authUserId } = await auth()
+      if (authUserId) {
+        const user = await prisma.user.findUnique({
+          where: { clerkId: authUserId },
         })
+        
+        if (user) {
+          await prisma.aIGenerationHistory.create({
+            data: {
+              prompt: requestBody?.content || '',
+              response: '',
+              model: 'gemini-pro',
+              status: 'FAILED',
+              userId: user.id, // Use user.id instead of userId (clerkId)
+              resumeId: requestBody?.resumeId || null,
+            },
+          })
+        }
       }
     } catch (logError) {
       console.error('Error logging failed AI generation:', logError)
@@ -153,12 +166,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user first
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     const { searchParams } = new URL(request.url)
     const resumeId = searchParams.get('resumeId')
     const limit = parseInt(searchParams.get('limit') || '10')
 
     const whereClause: any = {
-      userId: userId,
+      userId: user.id, // Use user.id instead of userId (clerkId)
     }
 
     if (resumeId) {
