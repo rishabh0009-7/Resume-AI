@@ -7,14 +7,27 @@ export class AiService {
     
     async generateResumeContent(content: string, context: string = "resume"): Promise<string> {
         try {
+            if (!process.env.GEMINI_API_KEY) {
+                throw new Error("GEMINI_API_KEY is not configured");
+            }
+
             const prompt = `Generate professional ${context} content based on the following information: ${content}. 
             Make it compelling, specific, and achievement-oriented. Use action verbs and quantify results where possible.`;
             
             const result = await this.model.generateContent(prompt);
             const response = await result.response;
-            return response.text();
+            const text = response.text();
+            
+            if (!text || text.trim().length === 0) {
+                throw new Error("AI returned empty response");
+            }
+            
+            return text;
         } catch (error) {
             console.error("AI generation error:", error);
+            if (error instanceof Error) {
+                throw new Error(`Failed to generate content: ${error.message}`);
+            }
             throw new Error("Failed to generate content");
         }
     }

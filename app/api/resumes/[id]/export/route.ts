@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { generatePDFBuffer, generateDOCXBuffer } from "@/lib/export-utils";
 
 export async function POST(
   request: NextRequest,
@@ -43,23 +44,29 @@ export async function POST(
     }
 
     // Generate resume content based on format
-    let content = "";
+    let buffer: Buffer;
     let filename = `${resume.title.replace(/[^a-zA-Z0-9]/g, "_")}.${format}`;
+    let contentType = '';
 
     if (format === "pdf") {
-      content = generatePDFContent(resume);
+      buffer = await generatePDFBuffer(resume);
+      contentType = 'application/pdf';
     } else if (format === "docx") {
-      content = generateDOCXContent(resume);
+      buffer = await generateDOCXBuffer(resume);
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     } else if (format === "txt") {
-      content = generateTXTContent(resume);
+      const content = generateTXTContent(resume);
+      buffer = Buffer.from(content, 'utf-8');
+      contentType = 'text/plain';
     } else {
       return NextResponse.json({ error: "Unsupported format" }, { status: 400 });
     }
 
-    return NextResponse.json({
-      content,
-      filename,
-      format,
+    return new NextResponse(buffer, {
+      headers: {
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
     });
   } catch (error) {
     console.error("Error exporting resume:", error);
