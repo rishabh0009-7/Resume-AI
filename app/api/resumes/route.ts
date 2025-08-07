@@ -1,6 +1,8 @@
+// app/api/resumes/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { ensureUserExists } from "@/lib/user-sync";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,16 +12,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
+    const user = await ensureUserExists();
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get all resumes for the user
     const resumes = await prisma.resume.findMany({
       where: { userId: user.id },
       include: {
@@ -50,24 +47,28 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, templateId } = body;
+    const { title, description, templateId, sections = [] } = body;
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
+    const user = await ensureUserExists();
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Create resume
+    // Create resume with sections
     const resume = await prisma.resume.create({
       data: {
         title,
         description,
         templateId,
         userId: user.id,
+        sections: {
+          create: sections.map((section: any, index: number) => ({
+            type: section.type,
+            title: section.title,
+            content: section.content,
+            order: index,
+          }))
+        }
       },
       include: {
         sections: {

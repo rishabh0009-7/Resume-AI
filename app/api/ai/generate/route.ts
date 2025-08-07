@@ -1,7 +1,9 @@
+// app/api/ai/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { aiService } from '@/lib/ai-services'
 import { prisma } from '@/lib/prisma'
+import { ensureUserExists } from '@/lib/user-sync'
 
 export async function POST(request: NextRequest) {
   let requestBody: any = {}
@@ -13,11 +15,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user first
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    })
-
+    // Ensure user exists in database
+    const user = await ensureUserExists()
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
@@ -26,21 +25,23 @@ export async function POST(request: NextRequest) {
     const { 
       type, 
       content, 
-      jobDescription, 
+      jobDescription = '', 
       resumeId, 
-      context,
-      experience,
-      skills,
-      sectionType 
+      context = 'resume',
+      experience = [],
+      skills = [],
+      sectionType = 'section'
     } = requestBody
 
     let generatedContent = ''
     let metadata = {}
 
+    console.log('AI Generation Request:', { type, content: content?.substring(0, 100) })
+
     switch (type) {
       case 'enhance_section':
         generatedContent = await aiService.enhanceResumeSection(
-          sectionType || 'section',
+          sectionType,
           content,
           jobDescription
         )
@@ -49,8 +50,8 @@ export async function POST(request: NextRequest) {
 
       case 'generate_summary':
         generatedContent = await aiService.generateSummary(
-          experience || [],
-          skills || [],
+          experience,
+          skills,
           jobDescription
         )
         metadata = { experience, skills }
@@ -59,13 +60,13 @@ export async function POST(request: NextRequest) {
       case 'suggest_skills':
         generatedContent = await aiService.suggestSkills(
           jobDescription,
-          content ? content.split(',') : []
+          Array.isArray(content) ? content : (content ? content.split(',').map((s: string) => s.trim()) : [])
         )
         metadata = { currentSkills: content }
         break
 
       case 'optimize_ats':
-        generatedContent = await aiService.optimizeForAts( // Fixed: lowercase 'a' in 'Ats'
+        generatedContent = await aiService.optimizeForAts(
           content,
           jobDescription
         )
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
         generatedContent = await aiService.generateJobSpecificContent(
           content,
           jobDescription,
-          sectionType || 'section'
+          sectionType
         )
         metadata = { sectionType, originalContent: content }
         break
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
       case 'generate_content':
         generatedContent = await aiService.generateResumeContent(
           content,
-          context || 'resume'
+          context
         )
         metadata = { context, originalContent: content }
         break
@@ -96,21 +97,22 @@ export async function POST(request: NextRequest) {
         )
     }
 
+    console.log('AI Generated Content:', generatedContent?.substring(0, 100))
+
     // Log AI generation history
     try {
       await prisma.aIGenerationHistory.create({
         data: {
-          prompt: content,
+          prompt: JSON.stringify({ type, content, jobDescription }),
           response: generatedContent,
           model: 'gemini-pro',
           status: 'SUCCESS',
-          userId: user.id, // Use user.id instead of userId (clerkId)
+          userId: user.id,
           resumeId: resumeId || null,
         },
       })
     } catch (error) {
       console.error('Error logging AI history:', error)
-      // Don't fail the request if logging fails
     }
 
     return NextResponse.json({
@@ -124,24 +126,18 @@ export async function POST(request: NextRequest) {
     
     // Log failed generation
     try {
-      const { userId: authUserId } = await auth()
-      if (authUserId) {
-        const user = await prisma.user.findUnique({
-          where: { clerkId: authUserId },
+      const user = await ensureUserExists()
+      if (user) {
+        await prisma.aIGenerationHistory.create({
+          data: {
+            prompt: JSON.stringify(requestBody),
+            response: '',
+            model: 'gemini-pro',
+            status: 'FAILED',
+            userId: user.id,
+            resumeId: requestBody?.resumeId || null,
+          },
         })
-        
-        if (user) {
-          await prisma.aIGenerationHistory.create({
-            data: {
-              prompt: requestBody?.content || '',
-              response: '',
-              model: 'gemini-pro',
-              status: 'FAILED',
-              userId: user.id, // Use user.id instead of userId (clerkId)
-              resumeId: requestBody?.resumeId || null,
-            },
-          })
-        }
       }
     } catch (logError) {
       console.error('Error logging failed AI generation:', logError)
@@ -157,7 +153,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Get AI generation history for a user
 export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth()
@@ -166,11 +161,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user first
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    })
-
+    const user = await ensureUserExists()
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
@@ -180,7 +171,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
 
     const whereClause: any = {
-      userId: user.id, // Use user.id instead of userId (clerkId)
+      userId: user.id,
     }
 
     if (resumeId) {
