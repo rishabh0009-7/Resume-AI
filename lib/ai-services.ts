@@ -8,7 +8,7 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export class AiService {
-    private model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    private model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     
     private async generateContent(prompt: string): Promise<string> {
         try {

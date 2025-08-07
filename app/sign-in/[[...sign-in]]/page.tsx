@@ -27,7 +27,7 @@ export default function Page() {
                   'text-blue-600 hover:text-blue-700 font-medium'
               }
             }}
-            redirectUrl="/dashboard"
+            redirectUrl="/"
           />
         </div>
       </div>
